@@ -8,11 +8,11 @@ contract NFTMarketplace is NFT {
     Counters.Counter public _tokenIds;
     Counters.Counter private _itemsSold;
 
-    uint256 listingPrice = 0.025 ether;
+    uint256 listingPrice = 0.025 ether; //to put nft into market pay fee
 
-    mapping(uint256 => MarketItem) private idToMarketItem;
+    mapping(uint256 => MarketItem) private idToMarketItem; //nft wrapped with market order structure (combines nft and marketplace)
 
-    struct MarketItem {
+    struct MarketItem { 
         uint256 tokenId;
         address payable seller;
         address payable owner;
@@ -28,24 +28,24 @@ contract NFTMarketplace is NFT {
         bool sold
     );
 
-    constructor(
+    constructor( 
         string memory _name,
         string memory _symbol,
-        string memory _baseURI
-    ) NFT(_name, _symbol, _baseURI) Ownable() {
+        string memory _baseURI 
+    ) NFT(_name, _symbol, _baseURI) Ownable() { //pushes into nft market contract, Ownable() is smartcontract only for owners
     }
 
-    /* Mints a token and lists it in the marketplace */
-    function createToken(string memory tokenURI, uint256 price) public payable returns (uint) {
+    /* Mints a NFT token and lists it in the marketplace */
+    function createToken(string memory tokenURI, uint256 price) public payable returns (uint) { 
         _tokenIds.increment();
-        uint256 newTokenId = _tokenIds.current();
-        _mint(msg.sender, newTokenId);
+        uint256 newTokenId = _tokenIds.current(); //current counter as new token id
+        _mint(msg.sender, newTokenId); //inherited from nft function
         _setTokenURI(newTokenId, tokenURI);
         createMarketItem(newTokenId, price);
         return newTokenId;
     }
 
-    function createMarketItem(
+    function createMarketItem( 
         uint256 tokenId,
         uint256 price
     ) private {
@@ -55,7 +55,7 @@ contract NFTMarketplace is NFT {
         idToMarketItem[tokenId] =  MarketItem(
             tokenId,
             payable(msg.sender),
-            payable(address(this)),
+            payable(address(this)), //adress = owner of this nft
             price,
             false
         );
@@ -83,7 +83,7 @@ contract NFTMarketplace is NFT {
 
         idToMarketItem[tokenId].owner = payable(msg.sender);
         idToMarketItem[tokenId].sold = true;
-        idToMarketItem[tokenId].seller = payable(address(0));
+        idToMarketItem[tokenId].seller = payable(address(0)); //no seller, eq to nothing. no private key exists
         _itemsSold.increment();
 
         _transfer(address(this), msg.sender, tokenId);
@@ -107,12 +107,12 @@ contract NFTMarketplace is NFT {
     /* Updates the listing price of the contract */
     function updateListingPrice(uint _listingPrice) public payable onlyOwner {
         // TODO: Change the listing price
-        ____________
+        listingPrice = _listingPrice;
     }
 
     /* Returns the listing price of the contract */
     // TODO: This function needs to be publically callable.
-    function getListingPrice() ______________________ {
+    function getListingPrice() public view returns(uint listingPrice) { //view: only reads data, no writing
         return listingPrice;
     }
 
@@ -124,11 +124,11 @@ contract NFTMarketplace is NFT {
         uint itemCount = 0;
 
         // TODO: Increment from the id of the first NFT to the last NFT
-        for (________) {
+        for (uint i = 0; i<totalItemCount; i++){
             // TODO: Use the ID to get the MarketItem, and check if the seller of the MarketItem 
             // is the person calling this function
-            if (_________) {
-                __________
+            if (msg.sender == idToMarketItem[i+1].seller){
+                itemCount += 1
             }
         }
 
@@ -139,14 +139,14 @@ contract NFTMarketplace is NFT {
         
         // TODO: Now, increment from the id of the first NFT to the last NFT, 
         // but add each of the user's NFTs to the array we created. 
-        for (____________) {
+        for (elem in items) {
             // TODO: Same as before
-            if (_____________) {
+            if (msg.sender == idToMarketItem[elem+1].seller) {
                 // TODO: Since our MarketItems are in storage, in order to avoid unnecessary data copying, 
                 // we should save the pointer to their location, rather than copy the data to memory. We can 
                 // to do this by using a storage type variable. 
-                MarketItem storage currentItem = _________
-                ________ = currentItem;
+                MarketItem storage currentItem = idToMarketItem[elem+1]
+                items[currentIndex] = currentItem;
                 currentIndex += 1;
             }
         }
@@ -156,20 +156,23 @@ contract NFTMarketplace is NFT {
     /* Returns only items that a user has purchased */
     function fetchMyNFTs() public view returns (MarketItem[] memory) {
         //TODO: Initialize some variables / counters
-        uint totalItemCount = _________
-        ________ = __________
-
-
+        uint totalItemCount = _tokenIds.current();
+        unit itemCount = 0;
         // TODO: Count how many NFTs the user owns
+        for (uint i = 0; i<totalItemCount; i++){
+            if (msg.sender == idToMarketItem[i+1].owner){
+                itemCount += 1
+            }
+        }
         // TODO: Create and return an array with all the NFTs that the user has purchased
         // Think: what are we doing differently this time?
-        _________________ = ________
-        _____________________ = _____________________
-        for (___________________) {
-            if (________________________) {
-               _____________________________________
-               _____________________________________
-               _____________________________________
+        uint currentIndex = 0;
+        MarketItem[] items = new MarketItem[](itemCount)
+        for (item in items) {
+            if (msg.sender == idToMarketItem[item+1].owner) {
+               MarketItem storage currentItem = idToMarketItem[item+1]
+               items[currentIndex] = currentItem;
+               currentIndex += 1;
             }
         }
         return items;
@@ -178,18 +181,18 @@ contract NFTMarketplace is NFT {
     /* Returns all unsold market items */
     function fetchMarketItems() public view returns (MarketItem[] memory) {
         // Number of NFTs
-        ___________________________
+        uint totalItemCount = _tokenIds.current();
         // TODO: get the number of unsold NFTs, we will subtract the number of sold NFTs from the total number of NFTs
-        uint unsoldItemCount = __________________________
+        uint unsoldItemCount = totalItemCount - _itemsSold.current();
 
-        _______________________
-        ___________________________________________________________
-        for (_______________________) {
+        uint currentIndex = 0;
+        MarketItem[] items = new MarketItem[](unsoldItemCount)
+        for (elem in items) {
             //TODO: Think, what is different this time?
-            if (_____________________ == _________) {
-               _____________________________________
-               _____________________________________
-               _____________________________________
+            if (idToMarketItem[item+1].owner == None) {
+               MarketItem storage currentItem = idToMarketItem[item+1]
+               items[currentIndex] = currentItem;
+               currentIndex += 1;
             }
         }
         return items;
